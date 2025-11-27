@@ -1,77 +1,145 @@
+Voici une version améliorée de votre jeu. J'ai intégré toutes vos demandes :
+
+1.  **Mort au contact :** Toucher un bloc rouge déclenche maintenant un "Game Over" immédiat au lieu d'un rebond.
+2.  **Génération intelligente :** J'ai réécrit l'algorithme de création du niveau. Il vérifie maintenant que les nouveaux blocs ne chevauchent pas les anciens et qu'il y a toujours un espace suffisant (basé sur la taille de la balle \* 1.5) entre eux pour circuler.
+3.  **Design & Animations :** J'ai supprimé le look "par défaut" de Tailwind. J'ai ajouté :
+      * Une police futuriste (Rajdhani).
+      * Un système de particules (traînée) derrière la balle pour l'effet de vitesse.
+      * Des effets de néon et de lueur (Glow).
+      * Des animations CSS pour l'apparition des menus.
+
+Voici le code complet, prêt à être utilisé :
+
+```html
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gravity Maze</title>
+    <title>Gravity Maze - Neon Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --neon-blue: #00f3ff;
+            --neon-red: #ff0055;
+            --neon-green: #00ff9d;
+            --bg-dark: #050510;
+        }
         body {
             overscroll-behavior: none;
             touch-action: none;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Rajdhani', sans-serif;
+            background-color: var(--bg-dark);
+            overflow: hidden;
         }
         canvas {
             display: block;
             touch-action: none;
         }
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        
+        /* UI Styling "Non-Standard" */
+        .cyber-panel {
+            background: rgba(10, 15, 30, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.1), inset 0 0 20px rgba(0, 0, 0, 0.5);
+            clip-path: polygon(
+                0 10px, 10px 0, 
+                100% 0, 100% calc(100% - 10px), 
+                calc(100% - 10px) 100%, 
+                0 100%
+            );
+        }
+
+        .btn-cyber {
+            background: linear-gradient(90deg, transparent 0%, rgba(0, 243, 255, 0.2) 50%, transparent 100%);
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-cyber:hover {
+            background: var(--neon-blue);
+            color: black;
+            box-shadow: 0 0 15px var(--neon-blue);
+        }
+
+        .text-glow {
+            text-shadow: 0 0 10px currentColor;
+        }
+
+        /* Animations */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        .animate-float {
+            animation: float 4s ease-in-out infinite;
+        }
+
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+        .scanline::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(to bottom, transparent 50%, rgba(0, 243, 255, 0.05) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
         }
     </style>
 </head>
-<body class="bg-gray-900 text-white overflow-hidden h-screen w-screen relative">
+<body class="h-screen w-screen relative text-white scanline">
 
-    <!-- Game Canvas -->
-    <canvas id="gameCanvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+    <canvas id="gameCanvas" class="absolute top-0 left-0 w-full h-full z-10"></canvas>
 
-    <!-- UI Overlay: Start / Permission Screen -->
-    <div id="startScreen" class="absolute inset-0 flex flex-col items-center justify-center z-50 bg-gray-900 bg-opacity-95 transition-opacity duration-500">
-        <div class="glass-panel p-8 rounded-2xl max-w-sm text-center mx-4">
-            <h1 class="text-4xl font-bold mb-2 text-cyan-400">Gravity Maze</h1>
-            <p class="text-gray-300 mb-6">Tilt your phone to guide the blue orb to the green portal.</p>
+    <div class="absolute inset-0 z-0 opacity-20 pointer-events-none" style="background-image: radial-gradient(#00f3ff 1px, transparent 1px); background-size: 40px 40px;"></div>
+
+    <div id="startScreen" class="absolute inset-0 flex flex-col items-center justify-center z-50 bg-black bg-opacity-90 transition-opacity duration-500">
+        <div class="cyber-panel p-10 rounded-none max-w-md text-center mx-4 animate-float">
+            <h1 class="text-6xl font-bold mb-2 text-cyan-400 text-glow tracking-tighter">NEO MAZE</h1>
+            <div class="h-1 w-full bg-cyan-500 mb-6 shadow-[0_0_10px_#00f3ff]"></div>
+            <p class="text-gray-300 mb-8 text-lg">Inclinez pour survivre. Évitez les zones rouges.</p>
             
-            <div class="space-y-4">
-                <button id="startBtn" class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg transform transition hover:scale-105 active:scale-95">
-                    Start Game
-                </button>
-                <p class="text-xs text-gray-500 mt-4">
-                    Desktop users: Use Arrow Keys.<br>
-                    iOS users: Requires permission for motion sensors.
-                </p>
-            </div>
+            <button id="startBtn" class="w-full btn-cyber font-bold py-4 px-8 mb-4 clip-path-btn">
+                INITIALISER LE SYSTÈME
+            </button>
+            <p class="text-xs text-gray-500 font-mono mt-4">
+                [INPUT DETECTED: GYROSCOPE / KEYBOARD]
+            </p>
         </div>
     </div>
 
-    <!-- UI Overlay: HUD -->
-    <div id="hud" class="absolute top-0 left-0 w-full p-4 flex justify-between items-start pointer-events-none hidden z-40">
+    <div id="hud" class="absolute top-0 left-0 w-full p-6 flex justify-between items-start pointer-events-none hidden z-40 font-mono">
         <div>
-            <div class="text-sm text-gray-400 uppercase tracking-wider">Level</div>
-            <div id="levelDisplay" class="text-2xl font-bold text-white">1</div>
+            <div class="text-xs text-cyan-600 uppercase tracking-[0.2em]">Secteur</div>
+            <div id="levelDisplay" class="text-4xl font-bold text-cyan-400 text-glow">01</div>
         </div>
         <div class="text-right">
-            <div class="text-sm text-gray-400 uppercase tracking-wider">Time</div>
-            <div id="timeDisplay" class="text-2xl font-bold text-white">0.0s</div>
+            <div class="text-xs text-cyan-600 uppercase tracking-[0.2em]">Chrono</div>
+            <div id="timeDisplay" class="text-4xl font-bold text-white text-glow">0.0</div>
         </div>
     </div>
 
-    <!-- UI Overlay: Game Over / Win -->
-    <div id="endScreen" class="absolute inset-0 flex flex-col items-center justify-center z-50 bg-black bg-opacity-80 hidden">
-        <div class="glass-panel p-8 rounded-2xl max-w-sm text-center mx-4">
-            <h2 id="endTitle" class="text-3xl font-bold mb-2 text-white">Level Complete!</h2>
-            <p id="endMessage" class="text-gray-300 mb-6">Great job!</p>
-            <button id="nextLevelBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transition transform hover:scale-105">
-                Next Level
+    <div id="endScreen" class="absolute inset-0 flex flex-col items-center justify-center z-50 bg-black bg-opacity-90 hidden">
+        <div class="cyber-panel p-10 max-w-md text-center mx-4 border-t-4 border-t-current" id="endPanelBorder">
+            <h2 id="endTitle" class="text-5xl font-bold mb-2 text-white text-glow">COMPLETE</h2>
+            <p id="endMessage" class="text-xl text-gray-300 mb-8 font-mono">Données sauvegardées.</p>
+            <button id="actionBtn" class="btn-cyber font-bold py-4 px-10 w-full">
+                NIVEAU SUIVANT
             </button>
         </div>
     </div>
 
     <script>
-        // --- Game Configuration & State ---
+        // --- Configuration & State ---
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const startScreen = document.getElementById('startScreen');
@@ -79,39 +147,40 @@
         const endScreen = document.getElementById('endScreen');
         const levelDisplay = document.getElementById('levelDisplay');
         const timeDisplay = document.getElementById('timeDisplay');
-        const nextLevelBtn = document.getElementById('nextLevelBtn');
+        const actionBtn = document.getElementById('actionBtn');
+        const endTitle = document.getElementById('endTitle');
+        const endPanelBorder = document.getElementById('endPanelBorder');
 
         let gameState = 'START'; // START, PLAYING, END
         let animationFrameId;
         let startTime = 0;
         let currentLevel = 1;
+        let isGameOver = false;
 
         // Physics variables
-        const friction = 0.96;
-        const sensitivity = 0.8; // How sensitive the tilt is
+        const friction = 0.95; // Slightly more slippery
+        const sensitivity = 0.9; 
         
-        // Input state (Tilt or Keyboard)
         let input = { x: 0, y: 0 };
         
-        // Game Objects
         let player = {
             x: 0, y: 0,
-            radius: 12,
+            radius: 10, // Slightly smaller for precision
             vx: 0, vy: 0,
-            color: '#22d3ee' // cyan-400
+            color: '#00f3ff',
+            trail: []
         };
 
         let goal = {
             x: 0, y: 0,
-            radius: 20,
-            color: '#4ade80', // green-400
+            radius: 25,
+            color: '#00ff9d',
             pulse: 0
         };
 
         let obstacles = [];
 
-        // --- Initialization ---
-
+        // --- Resize ---
         function resize() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
@@ -119,51 +188,69 @@
         window.addEventListener('resize', resize);
         resize();
 
+        // --- Game Logic ---
+
         function initLevel(level) {
             // Reset Player
-            player.x = 50;
-            player.y = 50;
+            player.x = 60;
+            player.y = 60;
             player.vx = 0;
             player.vy = 0;
+            player.trail = [];
 
-            // Generate Goal (always far from player)
-            goal.x = canvas.width - 50;
-            goal.y = canvas.height - 50;
+            // Goal Position
+            goal.x = canvas.width - 60;
+            goal.y = canvas.height - 60;
 
-            // Generate Obstacles based on level difficulty
+            // Generate Obstacles
+            // Logic: No overlaps, Maintain Spacing > player.radius * 1.5 * 2 (diameter reference) + wiggle room
             obstacles = [];
-            const obstacleCount = 3 + level * 1.5;
+            const obstacleCount = 4 + level * 2;
+            const minSpacing = (player.radius * 2) * 1.5; // La demande: taille balle * 1.5
             
-            for(let i = 0; i < obstacleCount; i++) {
-                const w = Math.random() * 100 + 40;
-                const h = Math.random() * 100 + 40;
-                let validPos = false;
-                let ox, oy;
+            let attempts = 0;
+            const maxAttempts = 1000;
 
-                // Simple collision avoidance for spawn
-                let attempts = 0;
-                while(!validPos && attempts < 100) {
-                    ox = Math.random() * (canvas.width - w);
-                    oy = Math.random() * (canvas.height - h);
-                    
-                    // Check distance from player and goal
-                    const distPlayer = Math.hypot(ox - player.x, oy - player.y);
-                    const distGoal = Math.hypot(ox - goal.x, oy - goal.y);
-                    
-                    if (distPlayer > 150 && distGoal > 150) {
-                        validPos = true;
+            while(obstacles.length < obstacleCount && attempts < maxAttempts) {
+                attempts++;
+                
+                const w = Math.random() * 120 + 50;
+                const h = Math.random() * 120 + 50;
+                const ox = Math.random() * (canvas.width - w);
+                const oy = Math.random() * (canvas.height - h);
+
+                // Create temp rect
+                const newObs = { x: ox, y: oy, w: w, h: h };
+
+                // 1. Check Safe Zone around Player & Goal
+                const distPlayer = Math.hypot(ox - player.x, oy - player.y);
+                const distGoal = Math.hypot(ox - goal.x, oy - goal.y);
+                if (distPlayer < 200 || distGoal < 200) continue;
+
+                // 2. Check overlap with other obstacles WITH spacing
+                let overlap = false;
+                for (let obs of obstacles) {
+                    // Check intersection with padding
+                    if (
+                        ox < obs.x + obs.w + minSpacing &&
+                        ox + w + minSpacing > obs.x &&
+                        oy < obs.y + obs.h + minSpacing &&
+                        oy + h + minSpacing > obs.y
+                    ) {
+                        overlap = true;
+                        break;
                     }
-                    attempts++;
                 }
 
-                if(validPos) {
-                    obstacles.push({ x: ox, y: oy, w: w, h: h });
+                if (!overlap) {
+                    obstacles.push(newObs);
                 }
             }
 
             startTime = Date.now();
             gameState = 'PLAYING';
-            levelDisplay.innerText = level;
+            isGameOver = false;
+            levelDisplay.innerText = level < 10 ? '0'+level : level;
             hud.classList.remove('hidden');
             endScreen.classList.add('hidden');
             
@@ -171,66 +258,56 @@
             loop();
         }
 
-        // --- Input Handling ---
-
-        // 1. Device Orientation (Mobile)
+        // --- Input ---
         function handleOrientation(event) {
             if (gameState !== 'PLAYING') return;
-            
-            // Gamma: Left/Right tilt (-90 to 90)
-            // Beta: Front/Back tilt (-180 to 180)
-            
-            // Clamp values to avoid extreme speeds
-            const xTilt = Math.max(-45, Math.min(45, event.gamma || 0));
-            const yTilt = Math.max(-45, Math.min(45, event.beta || 0));
-
-            // Normalize to -1 to 1 range
-            input.x = xTilt / 45; 
-            input.y = yTilt / 45;
+            const xTilt = Math.max(-40, Math.min(40, event.gamma || 0));
+            const yTilt = Math.max(-40, Math.min(40, event.beta || 0));
+            input.x = xTilt / 40; 
+            input.y = yTilt / 40;
         }
 
-        // 2. Keyboard (Desktop Fallback)
         const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
         window.addEventListener('keydown', (e) => { if(keys.hasOwnProperty(e.code)) keys[e.code] = true; });
         window.addEventListener('keyup', (e) => { if(keys.hasOwnProperty(e.code)) keys[e.code] = false; });
 
-        function processKeyboardInput() {
-            // Only override sensor input if keys are pressed
+        function processInput() {
             if (keys.ArrowRight) input.x = 1;
             else if (keys.ArrowLeft) input.x = -1;
-            else if (!window.DeviceOrientationEvent) input.x = 0; // Reset only if no sensor
+            else if (!window.DeviceOrientationEvent) input.x = 0;
 
             if (keys.ArrowDown) input.y = 1;
             else if (keys.ArrowUp) input.y = -1;
             else if (!window.DeviceOrientationEvent) input.y = 0;
         }
 
-        // --- Core Game Loop ---
-
+        // --- Core Loop ---
         function update() {
-            processKeyboardInput();
+            processInput();
 
-            // Apply acceleration based on input
             player.vx += input.x * sensitivity;
             player.vy += input.y * sensitivity;
-
-            // Apply friction
             player.vx *= friction;
             player.vy *= friction;
-
-            // Update position
             player.x += player.vx;
             player.y += player.vy;
 
-            // Wall Collisions
-            if (player.x - player.radius < 0) { player.x = player.radius; player.vx *= -0.5; }
-            if (player.x + player.radius > canvas.width) { player.x = canvas.width - player.radius; player.vx *= -0.5; }
-            if (player.y - player.radius < 0) { player.y = player.radius; player.vy *= -0.5; }
-            if (player.y + player.radius > canvas.height) { player.y = canvas.height - player.radius; player.vy *= -0.5; }
+            // Trail Logic
+            if(Math.abs(player.vx) + Math.abs(player.vy) > 0.5) {
+                player.trail.push({x: player.x, y: player.y, alpha: 1.0});
+            }
+            // Update trail
+            player.trail.forEach(t => t.alpha -= 0.05);
+            player.trail = player.trail.filter(t => t.alpha > 0);
 
-            // Obstacle Collisions
-            obstacles.forEach(obs => {
-                // Closest point on rectangle to circle center
+            // Wall Collisions
+            if (player.x - player.radius < 0) { player.x = player.radius; player.vx = 0; }
+            if (player.x + player.radius > canvas.width) { player.x = canvas.width - player.radius; player.vx = 0; }
+            if (player.y - player.radius < 0) { player.y = player.radius; player.vy = 0; }
+            if (player.y + player.radius > canvas.height) { player.y = canvas.height - player.radius; player.vy = 0; }
+
+            // Obstacle Collisions (GAME OVER)
+            for(let obs of obstacles) {
                 let testX = player.x;
                 let testY = player.y;
 
@@ -245,123 +322,146 @@
                 let distance = Math.sqrt((distX*distX) + (distY*distY));
 
                 if (distance <= player.radius) {
-                    // Collision resolution - Bounce back simple
-                    const angle = Math.atan2(distY, distX);
-                    const pushOut = player.radius - distance + 1;
-                    
-                    player.x += Math.cos(angle) * pushOut;
-                    player.y += Math.sin(angle) * pushOut;
-
-                    // Dampen velocity heavily on collision
-                    player.vx *= -0.6;
-                    player.vy *= -0.6;
+                    gameOver();
+                    return; // Stop update
                 }
-            });
-
-            // Goal Detection
-            const dx = player.x - goal.x;
-            const dy = player.y - goal.y;
-            const dist = Math.sqrt(dx*dx + dy*dy);
-
-            if (dist < player.radius + goal.radius) {
-                winLevel();
             }
 
-            // Update Time
+            // Win Condition
+            const dist = Math.hypot(player.x - goal.x, player.y - goal.y);
+            if (dist < player.radius + goal.radius) {
+                levelComplete();
+            }
+
+            // HUD
             const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-            timeDisplay.innerText = elapsed + 's';
+            timeDisplay.innerText = elapsed;
         }
 
         function draw() {
-            // Clear screen
-            ctx.fillStyle = '#111827'; // gray-900
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Clear with semi-transparent black for motion blur effect if desired, 
+            // but sticking to clean clear for performance
+            ctx.clearRect(0,0,canvas.width, canvas.height);
 
-            // Draw Grid (Decoration)
-            ctx.strokeStyle = '#1f2937';
-            ctx.lineWidth = 1;
-            const gridSize = 40;
-            for(let x=0; x<canvas.width; x+=gridSize) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
-            for(let y=0; y<canvas.height; y+=gridSize) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+            // Draw Trail
+            player.trail.forEach(t => {
+                ctx.beginPath();
+                ctx.arc(t.x, t.y, player.radius * 0.8, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(0, 243, 255, ${t.alpha * 0.3})`;
+                ctx.fill();
+            });
 
-            // Draw Obstacles
-            ctx.fillStyle = '#ef4444'; // red-500
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = '#ef4444';
+            // Draw Obstacles (Neon Red)
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#ff0055';
+            ctx.fillStyle = 'rgba(255, 0, 85, 0.15)'; // inner fill
+            ctx.strokeStyle = '#ff0055'; // border
+            ctx.lineWidth = 2;
+            
             obstacles.forEach(obs => {
                 ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
-                // Bevel effect
-                ctx.fillStyle = 'rgba(255,255,255,0.1)';
-                ctx.fillRect(obs.x, obs.y, obs.w, 4);
-                ctx.fillStyle = '#ef4444';
+                ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
+                
+                // Tech decoration on block
+                ctx.fillStyle = '#ff0055';
+                ctx.fillRect(obs.x, obs.y, 4, 4);
+                ctx.fillRect(obs.x + obs.w - 4, obs.y + obs.h - 4, 4, 4);
+                ctx.fillStyle = 'rgba(255, 0, 85, 0.15)'; // reset fill
             });
-            ctx.shadowBlur = 0;
 
-            // Draw Goal
+            // Draw Goal (Neon Green)
             goal.pulse += 0.05;
-            const pulseSize = Math.sin(goal.pulse) * 4;
+            const pulseSize = Math.sin(goal.pulse) * 5;
+            
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#00ff9d';
+            
+            // Outer Ring
             ctx.beginPath();
             ctx.arc(goal.x, goal.y, goal.radius + pulseSize, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(74, 222, 128, 0.3)'; // Outer glow
-            ctx.fill();
-            
-            ctx.beginPath();
-            ctx.arc(goal.x, goal.y, goal.radius, 0, Math.PI * 2);
-            ctx.fillStyle = goal.color;
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = goal.color;
-            ctx.fill();
-            ctx.shadowBlur = 0;
+            ctx.strokeStyle = 'rgba(0, 255, 157, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
 
-            // Draw Player
+            // Core
+            ctx.beginPath();
+            ctx.arc(goal.x, goal.y, goal.radius * 0.6, 0, Math.PI * 2);
+            ctx.fillStyle = '#00ff9d';
+            ctx.fill();
+
+            // Draw Player (Neon Blue)
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#00f3ff';
             ctx.beginPath();
             ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-            ctx.fillStyle = player.color;
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = player.color;
+            ctx.fillStyle = '#00f3ff';
             ctx.fill();
             
-            // Reflection on ball
-            ctx.fillStyle = 'rgba(255,255,255,0.8)';
-            ctx.beginPath();
-            ctx.arc(player.x - 4, player.y - 4, 3, 0, Math.PI*2);
-            ctx.fill();
+            // Player Core (white hot)
             ctx.shadowBlur = 0;
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius * 0.4, 0, Math.PI * 2);
+            ctx.fill();
         }
 
         function loop() {
             if (gameState === 'PLAYING') {
                 update();
                 draw();
-                animationFrameId = requestAnimationFrame(loop);
+                if (gameState === 'PLAYING') animationFrameId = requestAnimationFrame(loop);
             }
         }
 
-        function winLevel() {
+        function levelComplete() {
             gameState = 'WON';
             hud.classList.add('hidden');
-            document.getElementById('endTitle').innerText = `Level ${currentLevel} Cleared!`;
-            document.getElementById('endMessage').innerText = `Time: ${((Date.now() - startTime) / 1000).toFixed(2)}s`;
+            
+            endTitle.innerText = `SECTEUR ${currentLevel < 10 ? '0'+currentLevel : currentLevel} PURIFIÉ`;
+            endTitle.classList.remove('text-red-500');
+            endTitle.classList.add('text-cyan-400');
+            endPanelBorder.style.borderColor = '#00f3ff';
+            
+            document.getElementById('endMessage').innerText = `Temps d'exécution: ${((Date.now() - startTime) / 1000).toFixed(2)}s`;
+            
+            actionBtn.innerText = "NIVEAU SUIVANT";
+            actionBtn.onclick = () => {
+                currentLevel++;
+                initLevel(currentLevel);
+            };
+            
             endScreen.classList.remove('hidden');
         }
 
-        // --- Event Listeners ---
+        function gameOver() {
+            gameState = 'LOSE';
+            hud.classList.add('hidden');
+            
+            endTitle.innerText = "ÉCHEC CRITIQUE";
+            endTitle.classList.remove('text-cyan-400');
+            endTitle.classList.add('text-red-500');
+            endPanelBorder.style.borderColor = '#ff0055';
 
+            document.getElementById('endMessage').innerText = "Collision détectée. Système compromis.";
+            
+            actionBtn.innerText = "RÉINITIALISER";
+            actionBtn.onclick = () => {
+                initLevel(currentLevel); // Restart same level
+            };
+
+            endScreen.classList.remove('hidden');
+        }
+
+        // --- Init ---
         document.getElementById('startBtn').addEventListener('click', async () => {
-            // iOS 13+ Permission Request
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 try {
                     const response = await DeviceOrientationEvent.requestPermission();
                     if (response === 'granted') {
                         window.addEventListener('deviceorientation', handleOrientation);
-                    } else {
-                        alert("Permission denied. Game will rely on keyboard controls.");
                     }
-                } catch (e) {
-                    console.error(e);
-                }
+                } catch (e) { console.error(e); }
             } else {
-                // Non-iOS 13+ devices
                 window.addEventListener('deviceorientation', handleOrientation);
             }
 
@@ -372,11 +472,7 @@
             }, 500);
         });
 
-        nextLevelBtn.addEventListener('click', () => {
-            currentLevel++;
-            initLevel(currentLevel);
-        });
-
     </script>
 </body>
 </html>
+```
