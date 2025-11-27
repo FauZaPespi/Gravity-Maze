@@ -129,11 +129,6 @@
     </div>
 
     <script>
-        /**
-         * ==========================================
-         * CONFIGURATION ET CONSTANTES
-         * ==========================================
-         */
         const CONFIG = {
             STORAGE_KEY: 'gravity_maze_save_v1',
             INITIAL_LIVES: 3,
@@ -155,11 +150,6 @@
             }
         };
 
-        /**
-         * ==========================================
-         * ÉTAT DU JEU (STATE MANAGEMENT)
-         * ==========================================
-         */
         const State = {
             level: 1,
             lives: CONFIG.INITIAL_LIVES,
@@ -194,11 +184,6 @@
             }
         };
 
-        /**
-         * ==========================================
-         * MOTEUR PHYSIQUE ET LOGIQUE
-         * ==========================================
-         */
 
         // Initialisation du Canvas
         function resizeCanvas() {
@@ -474,12 +459,6 @@
             }
         }
 
-        /**
-         * ==========================================
-         * GESTION DES ÉVÉNEMENTS DE JEU
-         * ==========================================
-         */
-
         function updateHUD() {
             // Mise à jour du texte Niveau
             const lvl = State.level;
@@ -561,11 +540,6 @@
             UI.screens.end.classList.remove('hidden');
         }
 
-        /**
-         * ==========================================
-         * INITIALISATION GLOBALE
-         * ==========================================
-         */
         document.addEventListener('DOMContentLoaded', () => {
             setupControls();
             loadProgress();
