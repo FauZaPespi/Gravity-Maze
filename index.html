@@ -1,22 +1,9 @@
-Voici une version améliorée de votre jeu. J'ai intégré toutes vos demandes :
-
-1.  **Mort au contact :** Toucher un bloc rouge déclenche maintenant un "Game Over" immédiat au lieu d'un rebond.
-2.  **Génération intelligente :** J'ai réécrit l'algorithme de création du niveau. Il vérifie maintenant que les nouveaux blocs ne chevauchent pas les anciens et qu'il y a toujours un espace suffisant (basé sur la taille de la balle \* 1.5) entre eux pour circuler.
-3.  **Design & Animations :** J'ai supprimé le look "par défaut" de Tailwind. J'ai ajouté :
-      * Une police futuriste (Rajdhani).
-      * Un système de particules (traînée) derrière la balle pour l'effet de vitesse.
-      * Des effets de néon et de lueur (Glow).
-      * Des animations CSS pour l'apparition des menus.
-
-Voici le code complet, prêt à être utilisé :
-
-```html
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gravity Maze - Neon Edition</title>
+    <title>Gravity Maze</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
     <style>
@@ -475,4 +462,3 @@ Voici le code complet, prêt à être utilisé :
     </script>
 </body>
 </html>
-```
