@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cordova Sensor Demo: Gravity Maze</title>
+    <title>Gravity Maze</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
@@ -132,7 +132,7 @@
 
             // Generate Obstacles based on level difficulty
             obstacles = [];
-            const obstacleCount = 3 + level * 2;
+            const obstacleCount = 3 + level * 1.5;
             
             for(let i = 0; i < obstacleCount; i++) {
                 const w = Math.random() * 100 + 40;
