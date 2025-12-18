@@ -129,7 +129,13 @@
             </button>
         </div>
     </div>
-
+<script>
+if ("serviceWorker" in navigator) {
+window.addEventListener("load", () => {
+navigator.serviceWorker.register("/sw.js");
+});
+}
+</script>
     <script>
         const CONFIG = {
             STORAGE_KEY: 'gravity_maze_save_v1',
